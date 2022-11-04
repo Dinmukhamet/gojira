@@ -1,0 +1,30 @@
+[tool.poetry]
+name = "gojira"
+version = "0.1.1"
+description = "Lightweight framework to build a RESTful applications"
+authors = ["Dimash <d.igisinov@gmail.com>"]
+
+[tool.poetry.dependencies]
+python = "^3.9"
+fastapi = "^0.85.1"
+ormar = "^0.12.0"
+classy-fastapi = "^0.2.12"
+python-jose = {extras = ["cryptography"], version = "^3.3.0"}
+passlib = {extras = ["bcrypt"], version = "^1.7.4"}
+
+[tool.poetry.group.dev.dependencies]
+isort = "^5.10.1"
+flake8 = "^5.0.4"
+black = "^22.10.0"
+mypy = "^0.982"
+
+
+[tool.poetry.group.example.dependencies]
+alembic = "^1.8.1"
+python-dotenv = "^0.21.0"
+asyncpg = "^0.27.0"
+uvicorn = "^0.19.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
