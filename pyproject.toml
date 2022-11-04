@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "gojira"
-version = "0.1.1"
+version = "0.1.2"
 description = "Lightweight framework to build a RESTful applications"
 authors = ["Dimash <d.igisinov@gmail.com>"]
 

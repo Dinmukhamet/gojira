@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse, Response
-from my_auth.routes import router
+from my_auth.routes import routes
 from starlette.middleware.authentication import AuthenticationMiddleware
 from starlette.requests import HTTPConnection
 
@@ -9,7 +9,7 @@ from gojira.auth.middleware import BaseAuthentication
 
 app = FastAPI()
 app.state.database = get_database()
-app.include_router(router)
+app.include_router(routes.router)
 
 
 @app.on_event("startup")

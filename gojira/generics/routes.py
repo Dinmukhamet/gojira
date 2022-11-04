@@ -3,7 +3,17 @@ import uuid
 from dataclasses import dataclass
 from enum import Enum
 from functools import wraps
-from typing import Any, Dict, List, Mapping, Optional, Tuple, Type, cast
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    List,
+    Mapping,
+    Optional,
+    Tuple,
+    Type,
+    cast,
+)
 
 import pydantic
 from classy_fastapi import Routable
@@ -12,6 +22,8 @@ from classy_fastapi.route_args import EndpointDefinition, RouteArgs
 from fastapi import APIRouter, HTTPException, Request, status
 from ormar import Model, QuerySet
 
+from gojira import permissions
+from gojira.exceptions import PermissionDeniedException
 from gojira.generics.serializers import ModelSerializer
 
 logger = logging.getLogger(__file__)
@@ -140,6 +152,9 @@ class GenericController(BaseController):
     prefix: str = ""
     model: Type[Model]
     serializer_map: Mapping[str, Type[ModelSerializer]]
+    permission_classes: Tuple[Type[permissions.BasePermission], ...] = (
+        permissions.AllowAny,
+    )
     _endpoints: List[EndpointDefinition] = []
 
     def get_object(self, request: Request):
