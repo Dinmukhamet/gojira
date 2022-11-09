@@ -64,7 +64,7 @@ class BaseAuthentication(AuthenticationBackend):
         self.settings = settings
 
     def _get_user_model(self):
-        spec, model_name = self.settings.user_model.split(".")
+        spec, model_name = self.settings.user_model.rsplit(".", maxsplit=1)
         return getattr(importlib.import_module(spec), model_name)
 
     def _validate_headers(
