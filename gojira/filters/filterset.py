@@ -73,6 +73,8 @@ class BaseFilterSet(metaclass=FilterSetMetaclass, is_abstract=True):
             "%s's Meta class must define `fields` attribute." % cls.__name__
         )
 
+        exclude: Sequence[str] = getattr(meta, "exclude", tuple())
+
         _fields = fields
         if _fields == ALL_FIELDS:
             _fields = model.__fields__.keys()
@@ -84,4 +86,5 @@ class BaseFilterSet(metaclass=FilterSetMetaclass, is_abstract=True):
             )
             for field_name in _fields
             if field_name not in cls.declared_filters
+            and field_name not in exclude
         }
