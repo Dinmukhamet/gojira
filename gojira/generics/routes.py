@@ -30,6 +30,13 @@ logger = logging.getLogger(__file__)
 
 
 class ControllerMeta(RoutableMeta):
+    @classmethod
+    def __get_app_name(cls, model_cls) -> Optional[str]:
+        try:
+            return model_cls.Meta.tablename.split("_")[0]
+        except Exception:
+            return "default"
+        
     def __new__(  # type:ignore
         cls,
         name: str,
@@ -64,7 +71,7 @@ class ControllerMeta(RoutableMeta):
                     if api_method.name == "PATCH":
                         name = "partial_" + name
                     setattr(endpoint, "__name__", name)
-
+                    app_name = cls.__get_app_name(model_cls)
                     endpoints.append(
                         EndpointDefinition(
                             endpoint=endpoint,
@@ -80,6 +87,7 @@ class ControllerMeta(RoutableMeta):
                                 response_model_exclude=getattr(
                                     serializer_cls, "exclude", None
                                 ),
+                                openapi_extra={"tags": [app_name]}
                             ),
                         )
                     )
