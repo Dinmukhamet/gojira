@@ -46,6 +46,7 @@ class CreateMixin:
 class LimitOffsetPagination(BaseModel):
     limit: int = DEFAULT_LIMIT
     offset: int = DEFAULT_OFFSET
+    disable: bool = False
 
 
 class ListMixin:
@@ -61,6 +62,8 @@ class ListMixin:
 
     def paginate_queryset(self, request: Request, queryset: QuerySet):
         pagination = LimitOffsetPagination(**request.query_params)
+        if pagination.disable:
+            return queryset
         return queryset.limit(pagination.limit).offset(pagination.offset)
 
     @has_permissions()
