@@ -36,7 +36,7 @@ class ControllerMeta(RoutableMeta):
             return model_cls.Meta.tablename.split("_")[0]
         except Exception:
             return "default"
-        
+
     def __new__(  # type:ignore
         cls,
         name: str,
@@ -87,7 +87,7 @@ class ControllerMeta(RoutableMeta):
                                 response_model_exclude=getattr(
                                     serializer_cls, "exclude", None
                                 ),
-                                openapi_extra={"tags": [app_name]}
+                                openapi_extra={"tags": [app_name]},
                             ),
                         )
                     )
@@ -164,27 +164,31 @@ class GenericController(BaseController):
         permissions.AllowAny,
     )
     _endpoints: List[EndpointDefinition] = []
+    lookup_field: str = "id"
 
     def get_object(self, request: Request):
         queryset: QuerySet = self.get_queryset()
-        _id = request.path_params.get("id")
+        lookup = request.path_params.get(self.lookup_field)
 
-        if _id is None:
+        if lookup is None:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="id was not found in path",
+                detail=f"{self.lookup_field} was not found in path params",
             )
 
+        filter_kwargs = {self.lookup_field: lookup}
+
         instance: Optional[Model] = queryset.get_or_none(
-            id=int(_id)
+            **filter_kwargs
         )  # type:ignore
         if instance is None:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=(
-                    "%s with id: %s does not exist"
+                    "%s with %s: %s does not exist"
                     % instance.__class__.__name__,
-                    _id,
+                    self.lookup_field,
+                    lookup,
                 ),
             )
 
