@@ -166,7 +166,7 @@ class GenericController(BaseController):
     _endpoints: List[EndpointDefinition] = []
     lookup_field: str = "id"
 
-    def get_object(self, request: Request):
+    async def get_object(self, request: Request):
         queryset: QuerySet = self.get_queryset()
         lookup = request.path_params.get(self.lookup_field)
 
@@ -178,7 +178,7 @@ class GenericController(BaseController):
 
         filter_kwargs = {self.lookup_field: lookup}
 
-        instance: Optional[Model] = queryset.get_or_none(
+        instance: Optional[Model] = await queryset.get_or_none(
             **filter_kwargs
         )  # type:ignore
         if instance is None:
