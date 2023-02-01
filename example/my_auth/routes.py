@@ -1,8 +1,9 @@
 from fastapi import APIRouter
-from my_auth.models import CustomUser
 
 from example.my_auth.controllers import ProtectedView
 from gojira.generics.routes import GenericRouter
+
+from .models import CustomUser
 
 router = APIRouter()
 

@@ -1,19 +1,10 @@
 import logging
 import uuid
 from dataclasses import dataclass
+from datetime import date
 from enum import Enum
 from functools import wraps
-from typing import (
-    Any,
-    Callable,
-    Dict,
-    List,
-    Mapping,
-    Optional,
-    Tuple,
-    Type,
-    cast,
-)
+from typing import Any, Dict, List, Mapping, Optional, Tuple, Type, cast
 
 import pydantic
 from classy_fastapi import Routable
@@ -21,9 +12,9 @@ from classy_fastapi.routable import RoutableMeta
 from classy_fastapi.route_args import EndpointDefinition, RouteArgs
 from fastapi import APIRouter, HTTPException, Request, status
 from ormar import Model, QuerySet
+from starlette.convertors import Convertor, register_url_convertor
 
 from gojira import permissions
-from gojira.exceptions import PermissionDeniedException
 from gojira.generics.serializers import ModelSerializer
 
 logger = logging.getLogger(__file__)
@@ -64,14 +55,57 @@ class ControllerMeta(RoutableMeta):
                     include = getattr(serializer_cls, "_fields", None)
 
                     model = model_cls.get_pydantic(include=include)
+
+                    lookup_type = model_cls.__fields__.get(
+                        instance.lookup_field
+                    ).type_.__name__
+
                     path = construct_path(
-                        method=method, prefix=instance.prefix
+                        method=method,
+                        prefix=instance.prefix,
+                        lookup=f"{instance.lookup_field}:{lookup_type}",
                     )
+
                     name = "%s_%s" % (api_method.method_name, instance.prefix)
                     if api_method.name == "PATCH":
                         name = "partial_" + name
                     setattr(endpoint, "__name__", name)
                     app_name = cls.__get_app_name(model_cls)
+
+                    openapi_extra = {
+                        "tags": [app_name],
+                    }
+
+                    if api_method.name in ("POST", "PUT"):
+                        openapi_extra.update(
+                            {
+                                "requestBody": {
+                                    "content": {
+                                        "application/json": {
+                                            "schema": model.schema()
+                                        }
+                                    },
+                                    "required": True,
+                                }
+                            }
+                        )
+
+                    if api_method.method_name in (
+                        "retrieve",
+                        "update",
+                        "delete",
+                    ):
+                        openapi_extra.update(
+                            {
+                                "parameters": [
+                                    {
+                                        "in": "path",
+                                        "name": instance.lookup_field,
+                                    }
+                                ]
+                            }
+                        )
+
                     endpoints.append(
                         EndpointDefinition(
                             endpoint=endpoint,
@@ -87,7 +121,7 @@ class ControllerMeta(RoutableMeta):
                                 response_model_exclude=getattr(
                                     serializer_cls, "exclude", None
                                 ),
-                                openapi_extra={"tags": [app_name]},
+                                openapi_extra=openapi_extra,
                             ),
                         )
                     )
@@ -132,11 +166,11 @@ class Method(Enum):
     DELETE = APIMethod(name="DELETE", method_name="delete")
 
 
-def construct_path(method, prefix: str):
+def construct_path(method, prefix: str, lookup: str):
     base = "/%s/" % prefix
     if method in (Method.LIST, Method.CREATE):
         return base
-    return base + "{id}/"
+    return f"{base}{{{lookup}}}/"
 
 
 def get_paginated_response(model: Model):
@@ -219,15 +253,30 @@ class GenericController(BaseController):
         return serializers.get(action)
 
 
+class DateConvertor(Convertor):
+    regex = "[0-9]{4}-[0-9]{2}-[0-9]{2}"
+
+    def convert(self, value: str) -> date:
+        return date.fromisoformat(value)
+
+    def to_string(self, value: date) -> str:
+        return value.isoformat()
+
+
 class GenericRouter:
     def __init__(self, router: APIRouter):
         self.router = router
 
-    def register(self, view_cls):
+    def register(self, view_cls, path: Optional[str] = None):
         @wraps(view_cls)  # type:ignore
         def decorated(*args, **kwargs):
             result = view_cls(*args, **kwargs)
             return result
 
-        view = decorated()
+        register_url_convertor("date", DateConvertor())
+        view: GenericController = decorated()
+
+        if path is not None:
+            for route in view.router.routes:
+                route.path = path  # type:ignore
         return self.router.include_router(view.router)
