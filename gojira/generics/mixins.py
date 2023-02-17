@@ -1,5 +1,5 @@
 from functools import wraps
-from typing import Any, Callable, List, Tuple, Type
+from typing import Any, Callable, List, Tuple, Type, final
 
 from fastapi import Request, Response, status
 from ormar import Model, QuerySet
@@ -9,32 +9,39 @@ from gojira import permissions
 from gojira.constants import DEFAULT_LIMIT, DEFAULT_OFFSET
 from gojira.exceptions import PermissionDeniedException
 from gojira.filters.backends import FilterBackend
+from gojira.generics.routes import BaseController
+from gojira.permissions import AllowAny
 
 
 class has_permissions:
     def __init__(
         self,
-        permission_classes: Tuple[
-            Type[permissions.BasePermission], ...
-        ] = tuple(),
+        permission_classes: Any = (AllowAny,),
     ):
         self.permission_classes = permission_classes
 
     def __call__(self, method: Callable) -> Any:
         @wraps(method)
         async def inner(*args, **kwargs):
-            view = args[0]
-            request: Request = kwargs.get("request")
-            has_permission = permissions.and_(*view.permission_classes)
-            if not await has_permission(request=request):
-                raise PermissionDeniedException()
-            return await method(*args, **kwargs)
+            try:
+                view = args[0]
+            except IndexError:
+                pass
+            else:
+                if isinstance(view, BaseController):
+                    self.permission_classes = view.permission_classes
+            finally:
+                request: Request = kwargs.get("request")
+                has_permission = permissions.and_(*self.permission_classes)
+                if not await has_permission(request=request):
+                    raise PermissionDeniedException()
+                return await method(*args, **kwargs)
 
         return inner
 
 
 class CreateMixin:
-    @has_permissions()
+    @has_permissions
     async def create(self, request: Request, response: Response):
         raw_data = await request.json()
         queryset: QuerySet = self.get_queryset()  # type:ignore

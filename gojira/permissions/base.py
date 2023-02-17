@@ -41,8 +41,11 @@ class PermissionMeta(type):
 
 class BasePermission(metaclass=PermissionMeta):
     async def __call__(self, request: Request) -> bool:
-        self.request = request
-        return await self.has_permission()
+        try:
+            self.request = request
+            return await self.has_permission()
+        except Exception:
+            return False
 
     async def has_permission(self) -> bool:
         raise NotImplementedError()
