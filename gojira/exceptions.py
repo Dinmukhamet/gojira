@@ -7,12 +7,14 @@ from gojira import messages
 
 class APIException(HTTPException):
     status_code: int
-    details: str
+    detail: str
 
     def __init__(self, headers: Optional[Dict[str, Any]] = None) -> None:
-        super().__init__(self.status_code, self.details, headers)
+        super().__init__(
+            status_code=self.status_code, detail=self.detail, headers=headers
+        )
 
 
 class PermissionDeniedException(APIException):
     status_code: int = status.HTTP_403_FORBIDDEN
-    details: str = messages.PERMISSION_DENIED
+    detail: str = messages.PERMISSION_DENIED
